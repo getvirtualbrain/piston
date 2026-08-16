@@ -9,9 +9,26 @@ const { acquire_job_slot, release_job_slot, get_next_box_id } = require('./job')
 
 const ISOLATE_PATH = '/usr/local/bin/isolate';
 
+const registry = new Map();
+
+function register(session) {
+    registry.set(session.uuid, session);
+}
+
+function unregister(session_id) {
+    registry.delete(session_id);
+}
+
+function get_session(session_id) {
+    return registry.get(session_id);
+}
+
 class Session {
     #box;
     #cleaned_up;
+    #is_executing;
+    #current_event_bus;
+    #current_proc;
 
     constructor({ runtime, files, timeouts, cpu_times, memory_limits }) {
         this.uuid = uuidv4();
@@ -23,10 +40,17 @@ class Session {
         this.memory_limits = memory_limits;
         this.#box = null;
         this.#cleaned_up = false;
+        this.#is_executing = false;
+        this.#current_event_bus = null;
+        this.#current_proc = null;
     }
 
     get cleaned_up() {
         return this.#cleaned_up;
+    }
+
+    get is_executing() {
+        return this.#is_executing;
     }
 
     async prime() {
@@ -84,96 +108,123 @@ class Session {
     }
 
     async run_execute(code, args, stdin, timeout, cpu_time, memory_limit, event_bus) {
-        const exec_path = path.join(
-            this.#box.dir,
-            'submission',
-            '_exec.code'
-        );
-        await fs.write_file(exec_path, code);
-
-        const proc = cp.spawn(
-            ISOLATE_PATH,
-            [
-                '--run',
-                `-b${this.#box.id}`,
-                `--meta=${this.#box.metadata_file_path}`,
-                '--cg',
-                '-s',
-                '-c',
-                '/box/submission',
-                '-E',
-                'HOME=/tmp',
-                ...this.runtime.env_vars.flat_map(v => ['-E', v]),
-                '-E',
-                `PISTON_LANGUAGE=${this.runtime.language}`,
-                `--dir=${this.runtime.pkgdir}`,
-                `--dir=/etc:noexec`,
-                `--processes=${this.runtime.max_process_count}`,
-                `--open-files=${this.runtime.max_open_files}`,
-                `--fsize=${Math.floor(this.runtime.max_file_size / 1000)}`,
-                `--wall-time=${timeout / 1000}`,
-                `--time=${cpu_time / 1000}`,
-                `--extra-time=0`,
-                ...(memory_limit >= 0
-                    ? [`--cg-mem=${Math.floor(memory_limit / 1000)}`]
-                    : []),
-                ...(config.disable_networking ? [] : ['--share-net']),
-                '--',
-                '/bin/bash',
-                path.join(this.runtime.pkgdir, 'run'),
-                '_exec.code',
-                ...args,
-            ],
-            { stdio: 'pipe' }
-        );
-
-        if (stdin) proc.stdin.write(stdin);
-
-        const stdin_handler = data => proc.stdin.write(data);
-        const kill_handler = signal => proc.kill(signal);
-        event_bus.on('stdin', stdin_handler);
-        event_bus.on('kill', kill_handler);
-
-        proc.stdout.on('data', data => event_bus.emit('stdout', data));
-        proc.stderr.on('data', data => event_bus.emit('stderr', data));
-
-        await new Promise((res, rej) => {
-            proc.on('exit', () => res());
-            proc.on('error', err => rej(err));
-        });
-
-        event_bus.off('stdin', stdin_handler);
-        event_bus.off('kill', kill_handler);
-
-        const metadata_str = (
-            await fs.read_file(this.#box.metadata_file_path)
-        ).toString();
-
-        let exit_code = null;
-        let exit_signal = null;
-        let status = null;
-
-        for (const line of metadata_str.split('\n')) {
-            if (!line) continue;
-            const [key, value] = line.split(':');
-            if (key === undefined || value === undefined) continue;
-            switch (key) {
-                case 'exitcode':
-                    exit_code = parse_int(value);
-                    break;
-                case 'exitsig':
-                    exit_signal = globals.SIGNALS[parse_int(value)] ?? null;
-                    break;
-                case 'status':
-                    status = value;
-                    break;
-            }
+        if (this.#is_executing) {
+            throw new Error('Session is already executing');
         }
+        this.#is_executing = true;
+        this.#current_event_bus = event_bus;
 
-        return {
-            code: exit_code,
-            signal: ['TO', 'OL', 'EL'].includes(status) ? 'SIGKILL' : exit_signal,
-        };
+        try {
+            const exec_path = path.join(
+                this.#box.dir,
+                'submission',
+                '_exec.code'
+            );
+            await fs.write_file(exec_path, code);
+
+            const proc = cp.spawn(
+                ISOLATE_PATH,
+                [
+                    '--run',
+                    `-b${this.#box.id}`,
+                    `--meta=${this.#box.metadata_file_path}`,
+                    '--cg',
+                    '-s',
+                    '-c',
+                    '/box/submission',
+                    '-E',
+                    'HOME=/tmp',
+                    ...this.runtime.env_vars.flat_map(v => ['-E', v]),
+                    '-E',
+                    `PISTON_LANGUAGE=${this.runtime.language}`,
+                    `--dir=${this.runtime.pkgdir}`,
+                    `--dir=/etc:noexec`,
+                    `--processes=${this.runtime.max_process_count}`,
+                    `--open-files=${this.runtime.max_open_files}`,
+                    `--fsize=${Math.floor(this.runtime.max_file_size / 1000)}`,
+                    `--wall-time=${timeout / 1000}`,
+                    `--time=${cpu_time / 1000}`,
+                    `--extra-time=0`,
+                    ...(memory_limit >= 0
+                        ? [`--cg-mem=${Math.floor(memory_limit / 1000)}`]
+                        : []),
+                    ...(config.disable_networking ? [] : ['--share-net']),
+                    '--',
+                    '/bin/bash',
+                    path.join(this.runtime.pkgdir, 'run'),
+                    '_exec.code',
+                    ...args,
+                ],
+                { stdio: 'pipe' }
+            );
+            this.#current_proc = proc;
+
+            if (stdin) proc.stdin.write(stdin);
+
+            const stdin_handler = data => proc.stdin.write(data);
+            const kill_handler = signal => proc.kill(signal);
+            event_bus.on('stdin', stdin_handler);
+            event_bus.on('kill', kill_handler);
+
+            proc.stdout.on('data', data => event_bus.emit('stdout', data));
+            proc.stderr.on('data', data => event_bus.emit('stderr', data));
+
+            await new Promise((res, rej) => {
+                proc.on('exit', () => res());
+                proc.on('error', err => rej(err));
+            });
+
+            event_bus.off('stdin', stdin_handler);
+            event_bus.off('kill', kill_handler);
+
+            const metadata_str = (
+                await fs.read_file(this.#box.metadata_file_path)
+            ).toString();
+
+            let exit_code = null;
+            let exit_signal = null;
+            let status = null;
+
+            for (const line of metadata_str.split('\n')) {
+                if (!line) continue;
+                const [key, value] = line.split(':');
+                if (key === undefined || value === undefined) continue;
+                switch (key) {
+                    case 'exitcode':
+                        exit_code = parse_int(value);
+                        break;
+                    case 'exitsig':
+                        exit_signal = globals.SIGNALS[parse_int(value)] ?? null;
+                        break;
+                    case 'status':
+                        status = value;
+                        break;
+                }
+            }
+
+            return {
+                code: exit_code,
+                signal: ['TO', 'OL', 'EL'].includes(status) ? 'SIGKILL' : exit_signal,
+            };
+        } finally {
+            this.#is_executing = false;
+            this.#current_event_bus = null;
+            this.#current_proc = null;
+        }
+    }
+
+    send_stdin(data) {
+        if (this.#current_event_bus) {
+            this.#current_event_bus.emit('stdin', data);
+        }
+    }
+
+    kill_current(signal) {
+        if (this.#current_proc) {
+            try {
+                this.#current_proc.kill(signal);
+            } catch (_) {}
+        }
     }
 
     async read_file(filename) {
@@ -191,6 +242,7 @@ class Session {
         if (this.#cleaned_up) return;
         this.#cleaned_up = true;
         this.logger.info('Cleaning up session');
+        unregister(this.uuid);
         release_job_slot();
         if (this.#box) {
             cp.exec(
@@ -214,4 +266,4 @@ class Session {
     }
 }
 
-module.exports = { Session };
+module.exports = { Session, register, unregister, get_session };

@@ -6,7 +6,7 @@ const fetch = require('node-fetch');
 
 const runtime = require('../runtime');
 const { Job } = require('../job');
-const { Session } = require('../session');
+const { Session, register, get_session } = require('../session');
 const s3 = require('../s3');
 const package = require('../package');
 const globals = require('../globals');
@@ -164,11 +164,12 @@ router.use((req, res, next) => {
 });
 
 router.ws('/connect', async (ws, req) => {
+    const reconnect_id = req.query && req.query.sessionId;
+
     let session = null;
+    let is_owner = false;
+    let is_awaiting_execute = false;
     let s3_output_file = null;
-    let is_executing = false;
-    let current_event_bus = null;
-    let current_execution_promise = null;
 
     const send = obj => {
         try {
@@ -177,6 +178,20 @@ router.ws('/connect', async (ws, req) => {
             // ignore send errors on already-closed socket
         }
     };
+
+    if (reconnect_id) {
+        session = get_session(reconnect_id);
+        if (!session || session.cleaned_up) {
+            ws.close(4003, 'Session Not Found');
+            return;
+        }
+        send({
+            type: 'runtime',
+            language: session.runtime.language,
+            version: session.runtime.version.raw,
+            sessionId: session.uuid,
+        });
+    }
 
     ws.on('message', async data => {
         try {
@@ -266,10 +281,14 @@ router.ws('/connect', async (ws, req) => {
                         return;
                     }
 
+                    is_owner = true;
+                    register(session);
+
                     send({
                         type: 'runtime',
                         language: rt.language,
                         version: rt.version.raw,
+                        sessionId: session.uuid,
                     });
                     break;
                 }
@@ -279,7 +298,7 @@ router.ws('/connect', async (ws, req) => {
                         ws.close(4003, 'Not yet initialized');
                         return;
                     }
-                    if (is_executing) {
+                    if (session.is_executing) {
                         send({ type: 'error', message: 'Execution already in progress' });
                         return;
                     }
@@ -306,24 +325,19 @@ router.ws('/connect', async (ws, req) => {
                         send({ type: 'data', stream: 'stderr', data: data.toString() })
                     );
 
-                    is_executing = true;
-                    current_event_bus = exec_event_bus;
-
-                    const exec_promise = session.run_execute(
-                        code,
-                        args,
-                        stdin,
-                        run_timeout ?? session.timeouts.run,
-                        run_cpu_time ?? session.cpu_times.run,
-                        run_memory_limit ?? session.memory_limits.run,
-                        exec_event_bus
-                    );
-                    current_execution_promise = exec_promise;
-
+                    is_awaiting_execute = true;
                     send({ type: 'stage', stage: 'run' });
 
                     try {
-                        const result = await exec_promise;
+                        const result = await session.run_execute(
+                            code,
+                            args,
+                            stdin,
+                            run_timeout ?? session.timeouts.run,
+                            run_cpu_time ?? session.cpu_times.run,
+                            run_memory_limit ?? session.memory_limits.run,
+                            exec_event_bus
+                        );
                         send({
                             type: 'exit',
                             stage: 'run',
@@ -333,9 +347,7 @@ router.ws('/connect', async (ws, req) => {
                     } catch (err) {
                         send({ type: 'error', message: err.message || String(err) });
                     } finally {
-                        is_executing = false;
-                        current_event_bus = null;
-                        current_execution_promise = null;
+                        is_awaiting_execute = false;
                     }
                     break;
                 }
@@ -349,8 +361,8 @@ router.ws('/connect', async (ws, req) => {
                         ws.close(4004, 'Can only write to stdin');
                         return;
                     }
-                    if (is_executing && current_event_bus) {
-                        current_event_bus.emit('stdin', msg.data);
+                    if (is_awaiting_execute) {
+                        session.send_stdin(msg.data);
                     }
                     break;
                 }
@@ -365,10 +377,9 @@ router.ws('/connect', async (ws, req) => {
                         return;
                     }
 
-                    if (msg.signal === 'SIGTERM') {
-                        if (is_executing && current_event_bus && current_execution_promise) {
-                            current_event_bus.emit('kill', 'SIGKILL');
-                            try { await current_execution_promise; } catch (_) {}
+                    if (is_owner && msg.signal === 'SIGTERM') {
+                        if (session.is_executing) {
+                            session.kill_current('SIGKILL');
                         }
 
                         if (s3_output_file && s3.enabled) {
@@ -383,8 +394,8 @@ router.ws('/connect', async (ws, req) => {
 
                         await session.cleanup();
                         ws.close(4999, 'Session Ended');
-                    } else if (is_executing && current_event_bus) {
-                        current_event_bus.emit('kill', msg.signal);
+                    } else if (is_awaiting_execute && session.is_executing) {
+                        session.kill_current(msg.signal);
                     }
                     break;
                 }
@@ -396,16 +407,20 @@ router.ws('/connect', async (ws, req) => {
     });
 
     ws.on('close', async () => {
-        if (session !== null && !session.cleaned_up) {
+        if (is_owner && session !== null && !session.cleaned_up) {
             try {
                 await session.cleanup();
             } catch (_) {}
+        } else if (!is_owner && is_awaiting_execute && session && session.is_executing) {
+            session.kill_current('SIGKILL');
         }
     });
 
-    setTimeout(() => {
-        if (session === null) ws.close(4001, 'Initialization Timeout');
-    }, 1000);
+    if (!reconnect_id) {
+        setTimeout(() => {
+            if (session === null) ws.close(4001, 'Initialization Timeout');
+        }, 1000);
+    }
 });
 
 router.post('/execute', async (req, res) => {
