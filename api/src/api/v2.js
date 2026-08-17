@@ -24,7 +24,12 @@ async function resolve_file_urls(files) {
             if (!['http:', 'https:'].includes(parsed.protocol)) {
                 throw { message: `files[${i}].url must use http or https` };
             }
-            const resp = await fetch(file.url);
+            const headers = {};
+            if (file.bearer) {
+                headers['Authorization'] = `Bearer ${file.bearer}`;
+                delete file.bearer;
+            }
+            const resp = await fetch(file.url, { headers });
             if (!resp.ok) {
                 throw {
                     message: `Failed to fetch files[${i}].url: HTTP ${resp.status}`,
@@ -169,7 +174,6 @@ router.ws('/connect', async (ws, req) => {
     let session = null;
     let is_owner = false;
     let is_awaiting_execute = false;
-    let s3_output_file = null;
 
     const send = obj => {
         try {
@@ -208,7 +212,6 @@ router.ws('/connect', async (ws, req) => {
                         language,
                         version,
                         files,
-                        s3_output_file: s3_file,
                         run_timeout,
                         run_cpu_time,
                         run_memory_limit,
@@ -261,8 +264,6 @@ router.ws('/connect', async (ws, req) => {
                             file.encoding = 'utf8';
                         }
                     }
-
-                    s3_output_file = s3_file || null;
 
                     session = new Session({
                         runtime: rt,
@@ -377,19 +378,29 @@ router.ws('/connect', async (ws, req) => {
                         return;
                     }
 
+                    logger.info(`Signal received: signal=${msg.signal} is_owner=${is_owner} s3.enabled=${s3.enabled}`);
+
                     if (is_owner && msg.signal === 'SIGTERM') {
                         if (session.is_executing) {
                             session.kill_current('SIGKILL');
+                            await session.wait_for_execute();
                         }
 
-                        if (s3_output_file && s3.enabled) {
+                        if (s3.enabled) {
                             try {
-                                const buf = await session.read_file(s3_output_file);
+                                const filename = session.files[0].name;
+                                logger.info(`Uploading "${filename}" to S3`);
+                                const buf = await session.read_file(filename);
+                                logger.info(`Read file ok, size=${buf.length} bytes`);
                                 const key = await s3.upload(buf);
+                                logger.info(`S3 upload complete: key=${key}`);
                                 send({ type: 'upload', key });
                             } catch (err) {
+                                logger.error(`S3 upload failed: ${err.message}`);
                                 send({ type: 'error', message: `S3 upload failed: ${err.message}` });
                             }
+                        } else {
+                            logger.warn('SIGTERM received but S3 is not configured (PISTON_S3_BUCKET is empty)');
                         }
 
                         await session.cleanup();

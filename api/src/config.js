@@ -158,17 +158,7 @@ const options = {
         validators: [],
     },
     s3_region: {
-        desc: 'AWS region for S3',
-        default: 'us-east-1',
-        validators: [],
-    },
-    s3_access_key_id: {
-        desc: 'S3 access key ID',
-        default: '',
-        validators: [],
-    },
-    s3_secret_access_key: {
-        desc: 'S3 secret access key',
+        desc: 'AWS region for S3 (leave empty to use AWS_REGION env var)',
         default: '',
         validators: [],
     },

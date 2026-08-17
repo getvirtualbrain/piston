@@ -6,12 +6,8 @@ const enabled = !!config.s3_bucket;
 
 const client = enabled
     ? new S3Client({
-          region: config.s3_region,
+          ...(config.s3_region ? { region: config.s3_region } : {}),
           ...(config.s3_endpoint ? { endpoint: config.s3_endpoint } : {}),
-          credentials: {
-              accessKeyId: config.s3_access_key_id,
-              secretAccessKey: config.s3_secret_access_key,
-          },
       })
     : null;
 

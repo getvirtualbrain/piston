@@ -29,6 +29,7 @@ class Session {
     #is_executing;
     #current_event_bus;
     #current_proc;
+    #current_exec_promise;
 
     constructor({ runtime, files, timeouts, cpu_times, memory_limits }) {
         this.uuid = uuidv4();
@@ -43,6 +44,7 @@ class Session {
         this.#is_executing = false;
         this.#current_event_bus = null;
         this.#current_proc = null;
+        this.#current_exec_promise = null;
     }
 
     get cleaned_up() {
@@ -107,6 +109,12 @@ class Session {
         this.logger.debug('Session primed');
     }
 
+    async wait_for_execute() {
+        if (this.#current_exec_promise) {
+            try { await this.#current_exec_promise; } catch (_) {}
+        }
+    }
+
     async run_execute(code, args, stdin, timeout, cpu_time, memory_limit, event_bus) {
         if (this.#is_executing) {
             throw new Error('Session is already executing');
@@ -114,7 +122,10 @@ class Session {
         this.#is_executing = true;
         this.#current_event_bus = event_bus;
 
-        try {
+        const start_time = Date.now();
+        this.logger.info(`Execute invoked (code_length=${code.length} args=${JSON.stringify(args)})`);
+
+        const exec = async () => {
             const exec_path = path.join(
                 this.#box.dir,
                 'submission',
@@ -202,15 +213,21 @@ class Session {
                 }
             }
 
-            return {
+            const result = {
                 code: exit_code,
                 signal: ['TO', 'OL', 'EL'].includes(status) ? 'SIGKILL' : exit_signal,
             };
-        } finally {
+            this.logger.info(`Execute finished (exit_code=${result.code} signal=${result.signal} duration=${Date.now() - start_time}ms)`);
+            return result;
+        };
+
+        this.#current_exec_promise = exec().finally(() => {
             this.#is_executing = false;
             this.#current_event_bus = null;
             this.#current_proc = null;
-        }
+            this.#current_exec_promise = null;
+        });
+        return this.#current_exec_promise;
     }
 
     send_stdin(data) {
