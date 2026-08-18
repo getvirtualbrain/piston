@@ -26,5 +26,5 @@ echo 1 > init/cgroup.procs && \
 echo '+cpuset +memory' > cgroup.subtree_control && \
 echo "Initialized cgroup" && \
 mkdir -p /piston/packages && \
-chown -R piston:piston /piston && \
+chown piston:piston /piston /piston/packages && \
 exec su -- piston -c 'ulimit -n 65536 && node /piston_api/src'
