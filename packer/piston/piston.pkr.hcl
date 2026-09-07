@@ -46,10 +46,15 @@ source "amazon-ebs" "piston" {
 
   ami_name = local.ami_name
 
-  ami_block_device_mappings {
+  # launch_block_device_mappings redimensionne le volume racine de
+  # l'instance de build elle-même (l'AMI source Ubuntu n'a que ~8 Go par
+  # défaut, insuffisant pour tirer l'image piston) - ce volume devient
+  # ensuite tel quel le snapshot racine de l'AMI produite, donc pas besoin
+  # d'un ami_block_device_mappings séparé.
+  launch_block_device_mappings {
     device_name           = "/dev/sda1"
-    volume_size            = var.volume_size
-    volume_type            = "gp3"
+    volume_size           = var.volume_size
+    volume_type           = "gp3"
     delete_on_termination = true
     encrypted              = true
   }
