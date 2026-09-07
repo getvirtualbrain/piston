@@ -1,0 +1,33 @@
+[Unit]
+Description=Piston Code Runner
+After=network.target docker.service
+Requires=docker.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+User=root
+ExecStartPre=-/usr/bin/docker rm -f piston
+ExecStart=/usr/bin/docker run --rm \
+  --name piston \
+  --privileged \
+  --cgroupns=host \
+  -e PISTON_DISABLE_NETWORKING=true \
+  -e PISTON_OUTPUT_MAX_SIZE=650000 \
+  -e PISTON_MAX_PROCESS_COUNT=64 \
+  -e PISTON_MAX_OPEN_FILES=2048 \
+  -e PISTON_MAX_FILE_SIZE=268435456 \
+  -e PISTON_RUN_TIMEOUT=60000 \
+  -e PISTON_COMPILE_TIMEOUT=60000 \
+  -e PISTON_RUN_CPU_TIME=60000 \
+  -e PISTON_COMPILE_CPU_TIME=60000 \
+  -p 2000:2000 \
+  --tmpfs /tmp:exec \
+  ${image_uri}
+ExecStop=/usr/bin/docker stop piston
+ExecStopPost=/bin/sh -c 'for d in $(find /sys/fs/cgroup/isolate -mindepth 1 -type d 2>/dev/null | sort -r); do cat "$d/cgroup.procs" 2>/dev/null | xargs -r kill -9; rmdir "$d" 2>/dev/null; done; rmdir /sys/fs/cgroup/isolate 2>/dev/null; true'
+
+[Install]
+WantedBy=multi-user.target

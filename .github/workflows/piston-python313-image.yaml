@@ -116,3 +116,86 @@ jobs:
                   tags: ${{ steps.meta.outputs.tags }}
                   cache-from: type=gha,scope=piston-python313
                   cache-to: type=gha,mode=max,ignore-error=true,scope=piston-python313
+
+    # Pré-bake une AMI EC2 (Docker + image piston déjà pull + service systemd
+    # déjà enable) pour éliminer le délai de boot (apt/docker pull) sur les
+    # instances de l'ASG piston (cf. virtualbrain-terraform aws/environment/
+    # {env}/ec2/piston.tf + data.tf). Ne construit jamais sur le tag flottant
+    # python-3.13-<env> : recalcule le même tag SHA immuable que build_and_push
+    # (PYTHON_IMAGE_TAG-DEPLOY_ENV-GITHUB_SHA12), garanti déjà poussé sur ECR
+    # grâce à needs: build_and_push.
+    bake_ami:
+        needs: build_and_push
+        runs-on: ubuntu-latest
+        environment: ${{ matrix.environment }}
+        strategy:
+            fail-fast: false
+            # Staging se bake automatiquement à chaque merge, comme le build
+            # de l'image. Prod n'entre dans la matrice que sur déclenchement
+            # manuel (workflow_dispatch) : cohérent avec virtualbrain-terraform,
+            # où le tofu apply qui adopte la nouvelle AMI (rolling replace via
+            # instance_refresh) est lui aussi toujours manuel. (job-level `if`
+            # n'a pas accès au contexte matrix, d'où ce filtrage ici plutôt
+            # qu'un `if: matrix.environment == ...`.)
+            matrix:
+                environment: ${{ github.event_name == 'workflow_dispatch' && fromJSON('["staging","production"]') || fromJSON('["staging"]') }}
+        env:
+            # Terraform (aws/environment/prod/ec2) nomme son environnement
+            # "prod", pas "production" comme l'environnement GitHub : c'est
+            # cette valeur qui devient le tag Environment lu par le data
+            # "aws_ami" Terraform, donc pas de faute de frappe ici.
+            PACKER_ENVIRONMENT: ${{ matrix.environment == 'production' && 'prod' || 'staging' }}
+        permissions:
+            contents: read
+            id-token: write
+        steps:
+            - name: Check out repo
+              uses: actions/checkout@v4
+
+            - name: Configure AWS credentials
+              uses: aws-actions/configure-aws-credentials@v6
+              with:
+                  role-to-assume: ${{ vars.AWS_OIDC_ROLE }}
+                  aws-region: ${{ vars.AWS_REGION }}
+
+            - name: Login to Amazon ECR
+              id: ecr
+              uses: aws-actions/amazon-ecr-login@v2
+
+            - name: Compute immutable image tag
+              id: meta
+              env:
+                  DEPLOY_ENV: ${{ matrix.environment }}
+              run: |
+                  set -euo pipefail
+                  echo "image_tag=${PYTHON_IMAGE_TAG}-${DEPLOY_ENV}-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+            # Requis par ssh_interface = "session_manager" dans le template
+            # Packer : l'instance de build tourne dans un subnet privé sans IP
+            # publique, Packer s'y connecte via un tunnel SSM plutôt que SSH
+            # exposé publiquement.
+            - name: Install session-manager-plugin
+              run: |
+                  curl -fsSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o /tmp/session-manager-plugin.deb
+                  sudo dpkg -i /tmp/session-manager-plugin.deb
+
+            - name: Setup Packer
+              uses: hashicorp/setup-packer@v3
+              with:
+                  version: "1.16.0"
+
+            - name: Packer init
+              working-directory: packer/piston
+              run: packer init .
+
+            - name: Bake AMI
+              working-directory: packer/piston
+              run: |
+                  set -euo pipefail
+                  packer build \
+                    -var-file="${PACKER_ENVIRONMENT}.pkrvars.hcl" \
+                    -var "image_tag=${{ steps.meta.outputs.image_tag }}" \
+                    -var "ecr_registry=${{ steps.ecr.outputs.registry }}" \
+                    -var "subnet_id=${{ vars.PACKER_BUILDER_SUBNET_ID }}" \
+                    -var "security_group_id=${{ vars.PACKER_BUILDER_SECURITY_GROUP_ID }}" \
+                    .
