@@ -193,7 +193,7 @@ jobs:
               run: |
                   set -euo pipefail
                   packer build \
-                    -var-file="${PACKER_ENVIRONMENT}.pkrvars.hcl" \
+                    -var-file="${{ matrix.environment }}.pkrvars.hcl" \
                     -var "image_tag=${{ steps.meta.outputs.image_tag }}" \
                     -var "ecr_registry=${{ steps.ecr.outputs.registry }}" \
                     -var "subnet_id=${{ vars.PACKER_BUILDER_SUBNET_ID }}" \
