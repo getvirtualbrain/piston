@@ -73,10 +73,20 @@ source "amazon-ebs" "piston" {
 build {
   sources = ["source.amazon-ebs.piston"]
 
+  # Packer exécute par défaut les scripts inline via /bin/sh (dash sous
+  # Ubuntu), qui ne supporte pas "set -o pipefail" et casse le
+  # curl | docker login plus bas : on force bash sur tous les provisioners
+  # qui utilisent ces bashismes.
   provisioner "shell" {
+    inline_shebang = "/bin/bash -e"
     inline = [
       "cloud-init status --wait",
       "curl -fsSL https://get.docker.com/ | sudo sh",
+      "sudo apt-get update -qq && sudo apt-get install -y -qq unzip",
+      "curl -fsSL \"https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip\" -o /tmp/awscliv2.zip",
+      "unzip -q /tmp/awscliv2.zip -d /tmp",
+      "sudo /tmp/aws/install",
+      "rm -rf /tmp/aws /tmp/awscliv2.zip",
     ]
   }
 
@@ -84,6 +94,7 @@ build {
   # (packer-piston-builder, lecture ECR seule) via IMDS - aucune credential
   # long-lived sur la box.
   provisioner "shell" {
+    inline_shebang = "/bin/bash -e"
     environment_vars = [
       "IMAGE_URI=${local.image_uri}",
       "ECR_REGISTRY=${var.ecr_registry}",
@@ -99,6 +110,7 @@ build {
   # Valide que l'image pré-téléchargée démarre bel et bien avant de
   # promouvoir l'AMI - évite de bake et publier une image cassée.
   provisioner "shell" {
+    inline_shebang = "/bin/bash -e"
     environment_vars = [
       "IMAGE_URI=${local.image_uri}",
     ]
@@ -119,6 +131,7 @@ build {
   # enable sans start : le service démarrera au vrai boot de l'instance ASG
   # (systemd multi-user.target), pas ici.
   provisioner "shell" {
+    inline_shebang = "/bin/bash -e"
     inline = [
       "sudo mv /tmp/piston.service /etc/systemd/system/piston.service",
       "sudo systemctl daemon-reload",
