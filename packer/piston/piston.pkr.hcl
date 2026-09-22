@@ -95,6 +95,43 @@ build {
     ]
   }
 
+  # Paquets du bootstrap monitoring (aws/environment/{env}/ec2/init-scripts/
+  # piston-monitoring.sh.tftpl côté virtualbrain-terraform) : baked ici pour
+  # ne plus jamais faire d'apt install au boot. Alloy et node_exporter ne
+  # sont ni enable ni start ici - leur config dépend de valeurs propres à
+  # l'instance (IP privée, instance-id) écrites par ce user_data au vrai
+  # boot. chrony n'a aucune config instance-spécifique : safe de l'enable
+  # --now dès le build.
+  provisioner "shell" {
+    inline_shebang = "/bin/bash -e"
+    inline = [
+      "sudo mkdir -p /etc/apt/keyrings",
+      "curl -fsSL https://apt.grafana.com/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/grafana.gpg",
+      "echo \"deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main\" | sudo tee /etc/apt/sources.list.d/grafana.list",
+      "sudo apt-get update -qq",
+      "sudo apt-get install -y -qq alloy prometheus-node-exporter chrony",
+      "sudo usermod -aG systemd-journal alloy",
+      "sudo systemctl enable --now chrony",
+    ]
+  }
+
+  provisioner "file" {
+    source      = "${path.root}/files/alloy-default"
+    destination = "/tmp/alloy-default"
+  }
+
+  # /etc/default/alloy est chargé par l'unit systemd (EnvironmentFile=) : le
+  # paquet .deb le définit par défaut, on l'écrase avec un contenu
+  # entièrement statique (CONFIG_FILE + CUSTOM_ARGS ne dépendent d'aucune
+  # valeur propre à l'instance) - donc bakeable une fois pour toutes ici
+  # plutôt que réécrit à chaque boot.
+  provisioner "shell" {
+    inline_shebang = "/bin/bash -e"
+    inline = [
+      "sudo mv /tmp/alloy-default /etc/default/alloy",
+    ]
+  }
+
   # Pré-télécharge l'image piston dans l'AMI en utilisant le rôle instance
   # (packer-piston-builder, lecture ECR seule) via IMDS - aucune credential
   # long-lived sur la box.
@@ -135,10 +172,19 @@ build {
 
   # enable sans start : le service démarrera au vrai boot de l'instance ASG
   # (systemd multi-user.target), pas ici.
+  #
+  # /etc/piston/piston.env est créé vide ici : c'est le --env-file de
+  # ExecStart, rempli au boot par le user_data Terraform avec les valeurs
+  # propres à l'environnement (PISTON_S3_BUCKET / PISTON_S3_REGION). Le créer
+  # vide évite un crashloop docker "env file not found" sur une instance dont
+  # le user_data n'a pas encore tourné : piston démarre alors simplement avec
+  # S3 désactivé (api/src/s3.js : enabled = !!config.s3_bucket).
   provisioner "shell" {
     inline_shebang = "/bin/bash -e"
     inline = [
       "sudo mv /tmp/piston.service /etc/systemd/system/piston.service",
+      "sudo mkdir -p /etc/piston",
+      "sudo touch /etc/piston/piston.env",
       "sudo systemctl daemon-reload",
       "sudo systemctl enable piston.service",
     ]
