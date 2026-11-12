@@ -12,7 +12,7 @@ function does_match(package, rule) {
     const nameMatch = minimatch(package.language, rule.package_selector);
     const versionMatch = semver.satisfies(
         package.language_version,
-        rule.version_selector
+        rule.version_selector,
     );
 
     return nameMatch && versionMatch;
@@ -80,14 +80,14 @@ exports.handler = async ({ axios, specfile }) => {
                     !ensure_packages.find(
                         pkg =>
                             pkg.language == match.language &&
-                            pkg.language_version == match.language_version
+                            pkg.language_version == match.language_version,
                     )
                 )
                     ensure_packages.push(match);
             }
         } else {
             ensure_packages = ensure_packages.filter(
-                pkg => !does_match(pkg, rule)
+                pkg => !does_match(pkg, rule),
             );
         }
     }
@@ -108,7 +108,7 @@ exports.handler = async ({ axios, specfile }) => {
             !ensure_packages.find(
                 pkg =>
                     pkg.language == installed_package.language &&
-                    pkg.language_version == installed_package.language_version
+                    pkg.language_version == installed_package.language_version,
             )
         )
             operations.push({
@@ -123,7 +123,7 @@ exports.handler = async ({ axios, specfile }) => {
         console.log(
             (op.type == 'install'
                 ? chalk.green('Install')
-                : chalk.red('Uninstall')) + ` ${op.package} ${op.version}`
+                : chalk.red('Uninstall')) + ` ${op.package} ${op.version}`,
         );
     }
 
@@ -145,13 +145,13 @@ exports.handler = async ({ axios, specfile }) => {
                 console.log(
                     chalk.bold.green('Installed'),
                     op.package,
-                    op.version
+                    op.version,
                 );
             } catch (e) {
                 console.log(
                     chalk.bold.red('Failed to install') +
                         ` ${op.package} ${op.version}:`,
-                    e.message
+                    e.message,
                 );
             }
         } else if (op.type == 'uninstall') {
@@ -169,13 +169,13 @@ exports.handler = async ({ axios, specfile }) => {
                 console.log(
                     chalk.bold.green('Uninstalled'),
                     op.package,
-                    op.version
+                    op.version,
                 );
             } catch (e) {
                 console.log(
                     chalk.bold.red('Failed to uninstall') +
                         ` ${op.package} ${op.version}:`,
-                    e.message
+                    e.message,
                 );
             }
         }

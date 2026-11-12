@@ -22,7 +22,7 @@ class Package {
 
     get installed() {
         return fss.exists_sync(
-            path.join(this.install_path, globals.pkg_installed_file)
+            path.join(this.install_path, globals.pkg_installed_file),
         );
     }
 
@@ -31,7 +31,7 @@ class Package {
             config.data_directory,
             globals.data_directories.packages,
             this.language,
-            this.version.raw
+            this.version.raw,
         );
     }
 
@@ -44,7 +44,7 @@ class Package {
 
         if (fss.exists_sync(this.install_path)) {
             logger.warn(
-                `${this.language}-${this.version.raw} has residual files. Removing them.`
+                `${this.language}-${this.version.raw} has residual files. Removing them.`,
             );
             await fs.rm(this.install_path, { recursive: true, force: true });
         }
@@ -53,7 +53,7 @@ class Package {
         await fs.mkdir(this.install_path, { recursive: true });
 
         logger.debug(
-            `Downloading package from ${this.download} in to ${this.install_path}`
+            `Downloading package from ${this.download} in to ${this.install_path}`,
         );
         const pkgpath = path.join(this.install_path, 'pkg.tar.gz');
         const download = await fetch(this.download);
@@ -81,17 +81,17 @@ class Package {
 
         if (cs !== this.checksum) {
             throw new Error(
-                `Checksum miss-match want: ${this.checksum} got: ${cs}`
+                `Checksum miss-match want: ${this.checksum} got: ${cs}`,
             );
         }
 
         logger.debug(
-            `Extracting package files from archive ${pkgpath} in to ${this.install_path}`
+            `Extracting package files from archive ${pkgpath} in to ${this.install_path}`,
         );
 
         await new Promise((resolve, reject) => {
             const proc = cp.exec(
-                `bash -c 'cd "${this.install_path}" && tar xzf ${pkgpath}'`
+                `bash -c 'cd "${this.install_path}" && tar xzf ${pkgpath}'`,
             );
 
             proc.once('exit', (code, _) => {
@@ -118,7 +118,7 @@ class Package {
                 ['-i', 'bash', '-c', `${get_env_command}`],
                 {
                     stdio: ['ignore', 'pipe', 'pipe'],
-                }
+                },
             );
 
             proc.once('exit', (code, _) => {
@@ -137,8 +137,8 @@ class Package {
             .filter(
                 l =>
                     !['PWD', 'OLDPWD', '_', 'SHLVL'].includes(
-                        l.split('=', 2)[0]
-                    )
+                        l.split('=', 2)[0],
+                    ),
             )
             .join('\n');
 
@@ -148,13 +148,13 @@ class Package {
         await util.promisify(chownr)(
             this.install_path,
             process.getuid(),
-            process.getgid()
+            process.getgid(),
         );
 
         logger.debug('Writing installed state to disk');
         await fs.write_file(
             path.join(this.install_path, globals.pkg_installed_file),
-            Date.now().toString()
+            Date.now().toString(),
         );
 
         logger.info(`Installed ${this.language}-${this.version.raw}`);
@@ -171,15 +171,15 @@ class Package {
         logger.debug('Finding runtime');
         const found_runtime = runtime.get_runtime_by_name_and_version(
             this.language,
-            this.version.raw
+            this.version.raw,
         );
 
         if (!found_runtime) {
             logger.error(
-                `Uninstalling ${this.language}-${this.version.raw} failed: Not installed`
+                `Uninstalling ${this.language}-${this.version.raw} failed: Not installed`,
             );
             throw new Error(
-                `${this.language}-${this.version.raw} is not installed`
+                `${this.language}-${this.version.raw} is not installed`,
             );
         }
 

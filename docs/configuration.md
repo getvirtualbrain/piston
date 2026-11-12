@@ -138,11 +138,11 @@ Resists against large file writes to exhaust disk space.
 
 ```yaml
 key:
-  - PISTON_COMPILE_TIMEOUT
+    - PISTON_COMPILE_TIMEOUT
 default: 10000
 
 key:
-  - PISTON_RUN_TIMEOUT
+    - PISTON_RUN_TIMEOUT
 default: 3000
 ```
 
@@ -152,11 +152,11 @@ The maximum time that is allowed to be taken by a stage in milliseconds. This is
 
 ```yaml
 key:
-  - PISTON_COMPILE_CPU_TIME
+    - PISTON_COMPILE_CPU_TIME
 default: 10000
 
 key:
-  - PISTON_RUN_CPU_TIME
+    - PISTON_RUN_CPU_TIME
 default: 3000
 ```
 

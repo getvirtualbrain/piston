@@ -89,7 +89,7 @@ exports.builder = {
 
 async function handle_interactive(files, argv) {
     const ws = new WebSocket(
-        argv.pistonUrl.replace('http', 'ws') + '/api/v2/connect'
+        argv.pistonUrl.replace('http', 'ws') + '/api/v2/connect',
     );
 
     const log_message =
@@ -130,7 +130,7 @@ async function handle_interactive(files, argv) {
                     type: 'data',
                     stream: 'stdin',
                     data: data.toString(),
-                })
+                }),
             );
         });
     });
@@ -141,7 +141,7 @@ async function handle_interactive(files, argv) {
             chalk.white.bold('Reason: '),
             chalk.yellow(`"${reason}"`),
             chalk.white.bold('Code: '),
-            chalk.yellow(`"${code}"`)
+            chalk.yellow(`"${code}"`),
         );
         process.stdin.pause();
     });
@@ -153,13 +153,13 @@ async function handle_interactive(files, argv) {
             case 'runtime':
                 log_message(
                     chalk.bold.white('Runtime:'),
-                    chalk.yellow(`${msg.language} ${msg.version}`)
+                    chalk.yellow(`${msg.language} ${msg.version}`),
                 );
                 break;
             case 'stage':
                 log_message(
                     chalk.bold.white('Stage:'),
-                    chalk.yellow(msg.stage)
+                    chalk.yellow(msg.stage),
                 );
                 break;
             case 'data':
@@ -173,14 +173,14 @@ async function handle_interactive(files, argv) {
                         chalk.white.bold('Stage'),
                         chalk.yellow(msg.stage),
                         chalk.white.bold('exited with code'),
-                        chalk.yellow(msg.code)
+                        chalk.yellow(msg.code),
                     );
                 else
                     log_message(
                         chalk.white.bold('Stage'),
                         chalk.yellow(msg.stage),
                         chalk.white.bold('exited with signal'),
-                        chalk.yellow(msg.signal)
+                        chalk.yellow(msg.signal),
                     );
                 break;
             default:
@@ -227,7 +227,7 @@ async function run_non_interactively(files, argv) {
         if (ctx.code) {
             console.log(
                 chalk.bold(`Exit Code:`),
-                chalk.bold[ctx.code > 0 ? 'red' : 'green'](ctx.code)
+                chalk.bold[ctx.code > 0 ? 'red' : 'green'](ctx.code),
             );
         }
 

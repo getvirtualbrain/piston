@@ -39,7 +39,7 @@ expressWs(app);
     logger.info('Loading packages');
     const pkgdir = path.join(
         config.data_directory,
-        globals.data_directories.packages
+        globals.data_directories.packages,
     );
 
     const pkglist = await fs.readdir(pkgdir);
@@ -49,13 +49,13 @@ expressWs(app);
             return fs.readdir(path.join(pkgdir, lang)).then(x => {
                 return x.map(y => path.join(pkgdir, lang, y));
             });
-        })
+        }),
     );
 
     const installed_languages = languages
         .flat()
         .filter(pkg =>
-            fss.exists_sync(path.join(pkg, globals.pkg_installed_file))
+            fss.exists_sync(path.join(pkg, globals.pkg_installed_file)),
         );
 
     installed_languages.for_each(pkg => runtime.load_package(pkg));
@@ -68,7 +68,7 @@ expressWs(app);
         body_parser.urlencoded({
             extended: true,
             limit: config.request_body_limit,
-        })
+        }),
     );
     app.use(body_parser.json({ limit: config.request_body_limit }));
 
@@ -102,6 +102,6 @@ expressWs(app);
 
     process.on('SIGTERM', () => {
         server.close();
-        process.exit(0)
+        process.exit(0);
     });
 })();

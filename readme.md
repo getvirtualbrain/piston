@@ -52,11 +52,11 @@
 
 It's used in numerous places including:
 
--   [EMKC Challenges](https://emkc.org/challenges)
--   [EMKC Weekly Contests](https://emkc.org/contests)
--   [Engineer Man Discord Server](https://discord.gg/engineerman)
--   Web IDEs
--   200+ direct integrations
+- [EMKC Challenges](https://emkc.org/challenges)
+- [EMKC Weekly Contests](https://emkc.org/contests)
+- [Engineer Man Discord Server](https://discord.gg/engineerman)
+- Web IDEs
+- 200+ direct integrations
 
 <br>
 
@@ -64,21 +64,21 @@ It's used in numerous places including:
 
 The following are approved and endorsed extensions/utilities to the core Piston offering.
 
--   [I Run Code](https://github.com/engineer-man/piston-bot), a Discord bot used in 4100+ servers to handle arbitrary code evaluation in Discord. To get this bot in your own server, go here: https://emkc.org/run.
--   [Piston CLI](https://github.com/Shivansh-007/piston-cli), a universal shell supporting code highlighting, files, and interpretation without the need to download a language.
--   [Node Piston Client](https://github.com/dthree/node-piston), a Node.js wrapper for accessing the Piston API.
--   [Piston4J](https://github.com/the-codeboy/Piston4J), a Java wrapper for accessing the Piston API.
--   [Pyston](https://github.com/ffaanngg/pyston), a Python wrapper for accessing the Piston API.
--   [Go-Piston](https://github.com/milindmadhukar/go-piston), a Golang wrapper for accessing the Piston API.
--   [piston_rs](https://github.com/Jonxslays/piston_rs), a Rust wrapper for accessing the Piston API.
--   [piston_rspy](https://github.com/Jonxslays/piston_rspy), Python bindings for accessing the Piston API via `piston_rs`.
+- [I Run Code](https://github.com/engineer-man/piston-bot), a Discord bot used in 4100+ servers to handle arbitrary code evaluation in Discord. To get this bot in your own server, go here: https://emkc.org/run.
+- [Piston CLI](https://github.com/Shivansh-007/piston-cli), a universal shell supporting code highlighting, files, and interpretation without the need to download a language.
+- [Node Piston Client](https://github.com/dthree/node-piston), a Node.js wrapper for accessing the Piston API.
+- [Piston4J](https://github.com/the-codeboy/Piston4J), a Java wrapper for accessing the Piston API.
+- [Pyston](https://github.com/ffaanngg/pyston), a Python wrapper for accessing the Piston API.
+- [Go-Piston](https://github.com/milindmadhukar/go-piston), a Golang wrapper for accessing the Piston API.
+- [piston_rs](https://github.com/Jonxslays/piston_rs), a Rust wrapper for accessing the Piston API.
+- [piston_rspy](https://github.com/Jonxslays/piston_rspy), Python bindings for accessing the Piston API via `piston_rs`.
 
 <br>
 
 # Public API
 
--   Requires no installation but must obtain an authorization token to use it, see important note below on how to do this.
--   Reference the Runtimes/Execute sections below to learn about the request and response formats.
+- Requires no installation but must obtain an authorization token to use it, see important note below on how to do this.
+- Reference the Runtimes/Execute sections below to learn about the request and response formats.
 
 <br>
 
@@ -90,8 +90,9 @@ POST https://emkc.org/api/v2/piston/execute
 ```
 
 > Important Note: The Piston API is no longer freely available to the public (as of Feb 15, 2026). To obtain authorization, please reach out to EngineerMan on [Discord](https://discord.gg/engineerman) after reading below and determining that you may qualify. Authorization is only granted for good cause non-commercial educational projects.
-> 
+>
 > Keys **are not** granted for:
+>
 > - Projects that cost money
 > - Temporary projects
 > - Individual projects
@@ -100,7 +101,7 @@ POST https://emkc.org/api/v2/piston/execute
 > - Conceptual projects
 > - Vibe-coded AI slop projects
 > - Projects that generally don't benefit anyone.
-> 
+>
 > I reserve complete discretion on key issuance. If you didn't bother to read the list above I'll probably just ignore you. If a key is not issued, you are more than welcome to run your own instance of Piston, as it is open source, after all.
 
 <br>
@@ -111,10 +112,10 @@ POST https://emkc.org/api/v2/piston/execute
 
 ### Host System Package Dependencies
 
--   Docker
--   Docker Compose
--   Node JS (>= 15)
--   cgroup v2 enabled, and cgroup v1 disabled
+- Docker
+- Docker Compose
+- Node JS (>= 15)
+- cgroup v2 enabled, and cgroup v1 disabled
 
 ### After system dependencies are installed, clone this repository:
 
@@ -143,7 +144,7 @@ The API will now be online with no language runtimes installed. To install runti
 
 ### Host System Package Dependencies
 
--   Docker
+- Docker
 
 ### Installation
 
@@ -161,7 +162,7 @@ docker run \
 
 ### Host System Package Dependencies
 
--   Same as [All In One](#All-In-One)
+- Same as [All In One](#All-In-One)
 
 ### Installation
 
@@ -251,20 +252,20 @@ Content-Type: application/json
 `POST /api/v2/execute`
 This endpoint requests execution of some arbitrary code.
 
--   `language` (**required**) The language to use for execution, must be a string and must be installed.
--   `version` (**required**) The version of the language to use for execution, must be a string containing a SemVer selector for the version or the specific version number to use.
--   `files` (**required**) An array of files containing code or other data that should be used for execution. The first file in this array is considered the main file.
--   `files[].name` (_optional_) The name of the file to upload, must be a string containing no path or left out.
--   `files[].content` (**required**) The content of the files to upload, must be a string containing text to write.
--   `files[].encoding` (_optional_) The encoding scheme used for the file content. One of `base64`, `hex` or `utf8`. Defaults to `utf8`.
--   `stdin` (_optional_) The text to pass as stdin to the program. Must be a string or left out. Defaults to blank string.
--   `args` (_optional_) The arguments to pass to the program. Must be an array or left out. Defaults to `[]`.
--   `compile_timeout` (_optional_) The maximum wall-time allowed for the compile stage to finish before bailing out in milliseconds. Must be a number or left out. Defaults to `10000` (10 seconds).
--   `run_timeout` (_optional_) The maximum wall-time allowed for the run stage to finish before bailing out in milliseconds. Must be a number or left out. Defaults to `3000` (3 seconds).
--   `compile_cpu_time` (_optional_) The maximum CPU-time allowed for the compile stage to finish before bailing out in milliseconds. Must be a number or left out. Defaults to `10000` (10 seconds).
--   `run_cpu_time` (_optional_) The maximum CPU-time allowed for the run stage to finish before bailing out in milliseconds. Must be a number or left out. Defaults to `3000` (3 seconds).
--   `compile_memory_limit` (_optional_) The maximum amount of memory the compile stage is allowed to use in bytes. Must be a number or left out. Defaults to `-1` (no limit)
--   `run_memory_limit` (_optional_) The maximum amount of memory the run stage is allowed to use in bytes. Must be a number or left out. Defaults to `-1` (no limit)
+- `language` (**required**) The language to use for execution, must be a string and must be installed.
+- `version` (**required**) The version of the language to use for execution, must be a string containing a SemVer selector for the version or the specific version number to use.
+- `files` (**required**) An array of files containing code or other data that should be used for execution. The first file in this array is considered the main file.
+- `files[].name` (_optional_) The name of the file to upload, must be a string containing no path or left out.
+- `files[].content` (**required**) The content of the files to upload, must be a string containing text to write.
+- `files[].encoding` (_optional_) The encoding scheme used for the file content. One of `base64`, `hex` or `utf8`. Defaults to `utf8`.
+- `stdin` (_optional_) The text to pass as stdin to the program. Must be a string or left out. Defaults to blank string.
+- `args` (_optional_) The arguments to pass to the program. Must be an array or left out. Defaults to `[]`.
+- `compile_timeout` (_optional_) The maximum wall-time allowed for the compile stage to finish before bailing out in milliseconds. Must be a number or left out. Defaults to `10000` (10 seconds).
+- `run_timeout` (_optional_) The maximum wall-time allowed for the run stage to finish before bailing out in milliseconds. Must be a number or left out. Defaults to `3000` (3 seconds).
+- `compile_cpu_time` (_optional_) The maximum CPU-time allowed for the compile stage to finish before bailing out in milliseconds. Must be a number or left out. Defaults to `10000` (10 seconds).
+- `run_cpu_time` (_optional_) The maximum CPU-time allowed for the run stage to finish before bailing out in milliseconds. Must be a number or left out. Defaults to `3000` (3 seconds).
+- `compile_memory_limit` (_optional_) The maximum amount of memory the compile stage is allowed to use in bytes. Must be a number or left out. Defaults to `-1` (no limit)
+- `run_memory_limit` (_optional_) The maximum amount of memory the run stage is allowed to use in bytes. Must be a number or left out. Defaults to `-1` (no limit)
 
 ```json
 {
@@ -293,12 +294,12 @@ A typical response upon successful execution will contain 1 or 2 keys `run` and 
 Each of these keys has an identical structure, containing both a `stdout` and `stderr` key, which is a string containing the text outputted during the stage into each buffer.
 It also contains the `code` and `signal` which was returned from each process. It also includes a nullable human-readable `message` which is a description of why a stage has failed and a two-letter `status` that is either:
 
--   `RE` for runtime error
--   `SG` for dying on a signal
--   `TO` for timeout (either via `timeout` or `cpu_time`)
--   `OL` for stdout length exceeded
--   `EL` for stderr length exceeded
--   `XX` for internal error
+- `RE` for runtime error
+- `SG` for dying on a signal
+- `TO` for timeout (either via `timeout` or `cpu_time`)
+- `OL` for stdout length exceeded
+- `EL` for stderr length exceeded
+- `XX` for internal error
 
 ```json
 HTTP/1.1 200 OK
@@ -339,13 +340,13 @@ To interact with running processes in real time, you can establish a WebSocket c
 
 Each message is structured as a JSON object with a `type` key, which indicates the action to perform. Below is a list of message types, their directions, and descriptions:
 
--   **init** (client -> server): Initializes a job with the same parameters as the `/execute` endpoint, except that stdin is discarded.
--   **runtime** (server -> client): Provides details on the runtime environment, including the version and language.
--   **stage** (server -> client): Indicates the current execution stage, either "compile" or "run."
--   **data** (server <-> client): Exchanges data between the client and server, such as stdin, stdout, or stderr streams.
--   **signal** (client -> server): Sends a signal (e.g., for termination) to the running process, whether it's in the "compile" or "run" stage.
--   **exit** (server -> client): Signals the end of a stage, along with the exit code or signal.
--   **error** (server -> client): Reports an error, typically right before the WebSocket is closed.
+- **init** (client -> server): Initializes a job with the same parameters as the `/execute` endpoint, except that stdin is discarded.
+- **runtime** (server -> client): Provides details on the runtime environment, including the version and language.
+- **stage** (server -> client): Indicates the current execution stage, either "compile" or "run."
+- **data** (server <-> client): Exchanges data between the client and server, such as stdin, stdout, or stderr streams.
+- **signal** (client -> server): Sends a signal (e.g., for termination) to the running process, whether it's in the "compile" or "run" stage.
+- **exit** (server -> client): Signals the end of a stage, along with the exit code or signal.
+- **error** (server -> client): Reports an error, typically right before the WebSocket is closed.
 
 An example of this endpoint in use is depicted below (**<** = client to server, **>** = server to client)
 
@@ -360,12 +361,12 @@ An example of this endpoint in use is depicted below (**<** = client to server, 
 
 Errors may return status codes as follows:
 
--   **4000: Already Initialized**: Sent when a second `init` command is issued.
--   **4001: Initialization Timeout**: No `init` command was sent within 1 second of connection.
--   **4002: Notified Error**: A fatal error occurred, and an `error` packet was transmitted.
--   **4003: Not yet Initialized**: A non-`init` command was sent without a job context.
--   **4004: Can only write to stdin**: The client attempted to write to a stream other than stdin.
--   **4005: Invalid Signal**: An invalid signal was sent in a `signal` packet.
+- **4000: Already Initialized**: Sent when a second `init` command is issued.
+- **4001: Initialization Timeout**: No `init` command was sent within 1 second of connection.
+- **4002: Notified Error**: A fatal error occurred, and an `error` packet was transmitted.
+- **4003: Not yet Initialized**: A non-`init` command was sent without a job context.
+- **4004: Can only write to stdin**: The client attempted to write to a stream other than stdin.
+- **4005: Invalid Signal**: An invalid signal was sent in a `signal` packet.
 
 <br>
 
@@ -484,16 +485,16 @@ LibreOffice (`recalc.py`, `thumbnail.py`, `accept_changes.py`,
 
 Piston uses Isolate which makes use of Linux namespaces, chroot, multiple unprivileged users, and cgroup for sandboxing and resource limiting. Code execution submissions on Piston shall not be aware of each other, shall not affect each other and shall not affect the underlying host system. This is ensured through multiple steps including:
 
--   Disabling outgoing network interaction by default
--   Capping max processes at 256 by default (resists `:(){ :|: &}:;`, `while True: os.fork()`, etc.)
--   Capping max files at 2048 (resists various file based attacks)
--   Cleaning up all temp space after each execution (resists out of drive space attacks)
--   Running each submission as a different unprivileged user
--   Running each submission with its own isolated Linux namespaces
--   Capping runtime execution at 3 seconds by default (CPU-time and wall-time)
--   Capping the peak memory that all the submission's processes can use
--   Capping stdout to 1024 characters by default (resists yes/no bombs and runaway output)
--   SIGKILLing misbehaving code
+- Disabling outgoing network interaction by default
+- Capping max processes at 256 by default (resists `:(){ :|: &}:;`, `while True: os.fork()`, etc.)
+- Capping max files at 2048 (resists various file based attacks)
+- Cleaning up all temp space after each execution (resists out of drive space attacks)
+- Running each submission as a different unprivileged user
+- Running each submission with its own isolated Linux namespaces
+- Capping runtime execution at 3 seconds by default (CPU-time and wall-time)
+- Capping the peak memory that all the submission's processes can use
+- Capping stdout to 1024 characters by default (resists yes/no bombs and runaway output)
+- SIGKILLing misbehaving code
 
 <br>
 

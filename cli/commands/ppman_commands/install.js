@@ -33,7 +33,7 @@ exports.handler = async ({ axios, packages }) => {
 
             console.log(msg_format.color(install.data));
         } catch (e) {
-			console.log(e)
+            console.log(e);
         }
     }
 };

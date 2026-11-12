@@ -39,7 +39,7 @@ class Runtime {
     static compute_single_limit(
         language_name,
         limit_name,
-        language_limit_overrides
+        language_limit_overrides,
     ) {
         return (
             (config.limit_overrides[language_name] &&
@@ -56,64 +56,64 @@ class Runtime {
                 compile: this.compute_single_limit(
                     language_name,
                     'compile_timeout',
-                    language_limit_overrides
+                    language_limit_overrides,
                 ),
                 run: this.compute_single_limit(
                     language_name,
                     'run_timeout',
-                    language_limit_overrides
+                    language_limit_overrides,
                 ),
             },
             cpu_times: {
                 compile: this.compute_single_limit(
                     language_name,
                     'compile_cpu_time',
-                    language_limit_overrides
+                    language_limit_overrides,
                 ),
                 run: this.compute_single_limit(
                     language_name,
                     'run_cpu_time',
-                    language_limit_overrides
+                    language_limit_overrides,
                 ),
             },
             memory_limits: {
                 compile: this.compute_single_limit(
                     language_name,
                     'compile_memory_limit',
-                    language_limit_overrides
+                    language_limit_overrides,
                 ),
                 run: this.compute_single_limit(
                     language_name,
                     'run_memory_limit',
-                    language_limit_overrides
+                    language_limit_overrides,
                 ),
             },
             max_process_count: this.compute_single_limit(
                 language_name,
                 'max_process_count',
-                language_limit_overrides
+                language_limit_overrides,
             ),
             max_open_files: this.compute_single_limit(
                 language_name,
                 'max_open_files',
-                language_limit_overrides
+                language_limit_overrides,
             ),
             max_file_size: this.compute_single_limit(
                 language_name,
                 'max_file_size',
-                language_limit_overrides
+                language_limit_overrides,
             ),
             output_max_size: this.compute_single_limit(
                 language_name,
                 'output_max_size',
-                language_limit_overrides
+                language_limit_overrides,
             ),
         };
     }
 
     static load_package(package_dir) {
         let info = JSON.parse(
-            fss.read_file_sync(path.join(package_dir, 'pkg-info.json'))
+            fss.read_file_sync(path.join(package_dir, 'pkg-info.json')),
         );
 
         let {
@@ -129,7 +129,7 @@ class Runtime {
         if (build_platform !== globals.platform) {
             logger.warn(
                 `Package ${language}-${version} was built for platform ${build_platform}, ` +
-                    `but our platform is ${globals.platform}`
+                    `but our platform is ${globals.platform}`,
             );
         }
 
@@ -145,9 +145,9 @@ class Runtime {
                         runtime: language,
                         ...Runtime.compute_all_limits(
                             lang.language,
-                            lang.limit_overrides
+                            lang.limit_overrides,
                         ),
-                    })
+                    }),
                 );
             });
         } else {
@@ -158,7 +158,7 @@ class Runtime {
                     aliases,
                     pkgdir: package_dir,
                     ...Runtime.compute_all_limits(language, limit_overrides),
-                })
+                }),
             );
         }
 
@@ -200,12 +200,12 @@ module.exports.get_runtimes_matching_language_version = function (lang, ver) {
     return runtimes.filter(
         rt =>
             (rt.language == lang || rt.aliases.includes(lang)) &&
-            semver.satisfies(rt.version, ver)
+            semver.satisfies(rt.version, ver),
     );
 };
 module.exports.get_latest_runtime_matching_language_version = function (
     lang,
-    ver
+    ver,
 ) {
     return module.exports
         .get_runtimes_matching_language_version(lang, ver)
@@ -217,7 +217,7 @@ module.exports.get_runtime_by_name_and_version = function (runtime, ver) {
         rt =>
             (rt.runtime == runtime ||
                 (rt.runtime === undefined && rt.language == runtime)) &&
-            semver.satisfies(rt.version, ver)
+            semver.satisfies(rt.version, ver),
     );
 };
 

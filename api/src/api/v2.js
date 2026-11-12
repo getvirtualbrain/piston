@@ -82,7 +82,7 @@ function get_job(body) {
 
         const rt = runtime.get_latest_runtime_matching_language_version(
             language,
-            version
+            version,
         );
         if (rt === undefined) {
             return reject({
@@ -93,8 +93,7 @@ function get_job(body) {
         if (
             rt.language !== 'file' &&
             !files.some(
-                file =>
-                    !file.encoding || file.encoding === 'utf8' || file.url
+                file => !file.encoding || file.encoding === 'utf8' || file.url,
             )
         ) {
             return reject({
@@ -149,7 +148,7 @@ function get_job(body) {
                     run: run_memory_limit ?? rt.memory_limits.run,
                     compile: compile_memory_limit ?? rt.memory_limits.compile,
                 },
-            })
+            }),
         );
     });
 }
@@ -218,27 +217,40 @@ router.ws('/connect', async (ws, req) => {
                     } = msg;
 
                     if (!language || typeof language !== 'string') {
-                        send({ type: 'error', message: 'language is required as a string' });
+                        send({
+                            type: 'error',
+                            message: 'language is required as a string',
+                        });
                         ws.close(4002, 'Notified Error');
                         return;
                     }
                     if (!version || typeof version !== 'string') {
-                        send({ type: 'error', message: 'version is required as a string' });
+                        send({
+                            type: 'error',
+                            message: 'version is required as a string',
+                        });
                         ws.close(4002, 'Notified Error');
                         return;
                     }
                     if (!files || !Array.isArray(files) || files.length === 0) {
-                        send({ type: 'error', message: 'files is required as a non-empty array' });
+                        send({
+                            type: 'error',
+                            message: 'files is required as a non-empty array',
+                        });
                         ws.close(4002, 'Notified Error');
                         return;
                     }
 
-                    const rt = runtime.get_latest_runtime_matching_language_version(
-                        language,
-                        version
-                    );
+                    const rt =
+                        runtime.get_latest_runtime_matching_language_version(
+                            language,
+                            version,
+                        );
                     if (rt === undefined) {
-                        send({ type: 'error', message: `${language}-${version} runtime is unknown` });
+                        send({
+                            type: 'error',
+                            message: `${language}-${version} runtime is unknown`,
+                        });
                         ws.close(4002, 'Notified Error');
                         return;
                     }
@@ -252,15 +264,24 @@ router.ws('/connect', async (ws, req) => {
                     }
 
                     for (const [i, file] of files.entries()) {
-                        if (file.url === undefined && typeof file.content !== 'string') {
-                            send({ type: 'error', message: `files[${i}].content is required as a string` });
+                        if (
+                            file.url === undefined &&
+                            typeof file.content !== 'string'
+                        ) {
+                            send({
+                                type: 'error',
+                                message: `files[${i}].content is required as a string`,
+                            });
                             ws.close(4002, 'Notified Error');
                             return;
                         }
                         if (!file.name || typeof file.name !== 'string') {
                             file.name = `file${i}.code`;
                         }
-                        if (!file.encoding || !['base64', 'hex', 'utf8'].includes(file.encoding)) {
+                        if (
+                            !file.encoding ||
+                            !['base64', 'hex', 'utf8'].includes(file.encoding)
+                        ) {
                             file.encoding = 'utf8';
                         }
                     }
@@ -270,14 +291,19 @@ router.ws('/connect', async (ws, req) => {
                         files,
                         timeouts: { run: run_timeout ?? rt.timeouts.run },
                         cpu_times: { run: run_cpu_time ?? rt.cpu_times.run },
-                        memory_limits: { run: run_memory_limit ?? rt.memory_limits.run },
+                        memory_limits: {
+                            run: run_memory_limit ?? rt.memory_limits.run,
+                        },
                     });
 
                     try {
                         await session.prime();
                     } catch (err) {
                         session = null;
-                        send({ type: 'error', message: err.message || String(err) });
+                        send({
+                            type: 'error',
+                            message: err.message || String(err),
+                        });
                         ws.close(4002, 'Notified Error');
                         return;
                     }
@@ -300,7 +326,10 @@ router.ws('/connect', async (ws, req) => {
                         return;
                     }
                     if (session.is_executing) {
-                        send({ type: 'error', message: 'Execution already in progress' });
+                        send({
+                            type: 'error',
+                            message: 'Execution already in progress',
+                        });
                         return;
                     }
 
@@ -314,16 +343,27 @@ router.ws('/connect', async (ws, req) => {
                     } = msg;
 
                     if (typeof code !== 'string') {
-                        send({ type: 'error', message: 'execute.code must be a string' });
+                        send({
+                            type: 'error',
+                            message: 'execute.code must be a string',
+                        });
                         return;
                     }
 
                     const exec_event_bus = new events.EventEmitter();
                     exec_event_bus.on('stdout', data =>
-                        send({ type: 'data', stream: 'stdout', data: data.toString() })
+                        send({
+                            type: 'data',
+                            stream: 'stdout',
+                            data: data.toString(),
+                        }),
                     );
                     exec_event_bus.on('stderr', data =>
-                        send({ type: 'data', stream: 'stderr', data: data.toString() })
+                        send({
+                            type: 'data',
+                            stream: 'stderr',
+                            data: data.toString(),
+                        }),
                     );
 
                     is_awaiting_execute = true;
@@ -337,7 +377,7 @@ router.ws('/connect', async (ws, req) => {
                             run_timeout ?? session.timeouts.run,
                             run_cpu_time ?? session.cpu_times.run,
                             run_memory_limit ?? session.memory_limits.run,
-                            exec_event_bus
+                            exec_event_bus,
                         );
                         send({
                             type: 'exit',
@@ -346,7 +386,10 @@ router.ws('/connect', async (ws, req) => {
                             signal: result.signal,
                         });
                     } catch (err) {
-                        send({ type: 'error', message: err.message || String(err) });
+                        send({
+                            type: 'error',
+                            message: err.message || String(err),
+                        });
                     } finally {
                         is_awaiting_execute = false;
                     }
@@ -378,7 +421,9 @@ router.ws('/connect', async (ws, req) => {
                         return;
                     }
 
-                    logger.info(`Signal received: signal=${msg.signal} is_owner=${is_owner} s3.enabled=${s3.enabled}`);
+                    logger.info(
+                        `Signal received: signal=${msg.signal} is_owner=${is_owner} s3.enabled=${s3.enabled}`,
+                    );
 
                     if (is_owner && msg.signal === 'SIGTERM') {
                         if (session.is_executing) {
@@ -391,16 +436,25 @@ router.ws('/connect', async (ws, req) => {
                                 const filename = session.files[0].name;
                                 logger.info(`Uploading "${filename}" to S3`);
                                 const buf = await session.read_file(filename);
-                                logger.info(`Read file ok, size=${buf.length} bytes`);
+                                logger.info(
+                                    `Read file ok, size=${buf.length} bytes`,
+                                );
                                 const key = await s3.upload(buf);
                                 logger.info(`S3 upload complete: key=${key}`);
                                 send({ type: 'upload', key });
                             } catch (err) {
-                                logger.error(`S3 upload failed: ${err.message}`);
-                                send({ type: 'error', message: `S3 upload failed: ${err.message}` });
+                                logger.error(
+                                    `S3 upload failed: ${err.message}`,
+                                );
+                                send({
+                                    type: 'error',
+                                    message: `S3 upload failed: ${err.message}`,
+                                });
                             }
                         } else {
-                            logger.warn('SIGTERM received but S3 is not configured (PISTON_S3_BUCKET is empty)');
+                            logger.warn(
+                                'SIGTERM received but S3 is not configured (PISTON_S3_BUCKET is empty)',
+                            );
                         }
 
                         await session.cleanup();
@@ -422,7 +476,12 @@ router.ws('/connect', async (ws, req) => {
             try {
                 await session.cleanup();
             } catch (_) {}
-        } else if (!is_owner && is_awaiting_execute && session && session.is_executing) {
+        } else if (
+            !is_owner &&
+            is_awaiting_execute &&
+            session &&
+            session.is_executing
+        ) {
             session.kill_current('SIGKILL');
         }
     });
@@ -513,7 +572,7 @@ router.post('/packages', async (req, res) => {
     } catch (e) {
         logger.error(
             `Error while installing package ${pkg.language}-${pkg.version}:`,
-            e.message
+            e.message,
         );
 
         return res.status(500).send({
@@ -542,7 +601,7 @@ router.delete('/packages', async (req, res) => {
     } catch (e) {
         logger.error(
             `Error while uninstalling package ${pkg.language}-${pkg.version}:`,
-            e.message
+            e.message,
         );
 
         return res.status(500).send({

@@ -253,12 +253,12 @@ for (const option_name in options) {
         env_val === undefined ? [value, value] : [parsed_val, env_val];
     const validation_response = apply_validators(
         option.validators,
-        validator_parameters
+        validator_parameters,
     );
     if (validation_response !== true) {
         logger.error(
             `Config option ${option_name} failed validation:`,
-            validation_response
+            validation_response,
         );
         process.exit(1);
     }

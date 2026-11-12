@@ -1,7 +1,5 @@
 {
-  "language": "forth",
-  "version": "0.7.3",
-  "aliases": [
-    "gforth"
-  ]
+    "language": "forth",
+    "version": "0.7.3",
+    "aliases": ["gforth"]
 }
