@@ -19,7 +19,7 @@ async function upload(buffer) {
             Bucket: config.s3_bucket,
             Key: key,
             Body: buffer,
-        })
+        }),
     );
     return key;
 }

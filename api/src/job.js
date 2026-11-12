@@ -83,7 +83,7 @@ class Job {
                 (error, stdout, stderr) => {
                     if (error) {
                         rej(
-                            `Failed to run isolate --init: ${error.message}\nstdout: ${stdout}\nstderr: ${stderr}`
+                            `Failed to run isolate --init: ${error.message}\nstdout: ${stdout}\nstderr: ${stderr}`,
                         );
                     }
                     if (stdout === '') {
@@ -96,7 +96,7 @@ class Job {
                     };
                     this.#dirty_boxes.push(box);
                     res(box);
-                }
+                },
             );
         });
     }
@@ -116,7 +116,7 @@ class Job {
 
             if (rel.startsWith('..'))
                 throw Error(
-                    `File path "${file.name}" tries to escape parent directory: ${rel}`
+                    `File path "${file.name}" tries to escape parent directory: ${rel}`,
                 );
 
             const file_content = Buffer.from(file.content, file.encoding);
@@ -141,7 +141,7 @@ class Job {
         timeout,
         cpu_time,
         memory_limit,
-        event_bus = null
+        event_bus = null,
     ) {
         let stdout = '';
         let stderr = '';
@@ -188,7 +188,7 @@ class Job {
             ],
             {
                 stdio: 'pipe',
-            }
+            },
         );
 
         if (event_bus === null) {
@@ -221,7 +221,7 @@ class Job {
                     // Could already be dead and just needs to be waited on
                     this.logger.debug(
                         `Got error while SIGABRTing process ${proc}:`,
-                        e
+                        e,
                     );
                 }
             } else {
@@ -246,7 +246,7 @@ class Job {
                     // Could already be dead and just needs to be waited on
                     this.logger.debug(
                         `Got error while SIGABRTing process ${proc}:`,
-                        e
+                        e,
                     );
                 }
             } else {
@@ -280,7 +280,7 @@ class Job {
                 const [key, value] = line.split(':');
                 if (key === undefined || value === undefined) {
                     throw new Error(
-                        `Failed to parse metadata file, received: ${line}`
+                        `Failed to parse metadata file, received: ${line}`,
                     );
                 }
                 switch (key) {
@@ -311,7 +311,7 @@ class Job {
             }
         } catch (e) {
             throw new Error(
-                `Error reading metadata file: ${box.metadata_file_path}\nError: ${e.message}\nIsolate run stdout: ${stdout}\nIsolate run stderr: ${stderr}`
+                `Error reading metadata file: ${box.metadata_file_path}\nError: ${e.message}\nIsolate run stdout: ${stdout}\nIsolate run stderr: ${stderr}`,
             );
         }
 
@@ -334,7 +334,7 @@ class Job {
         if (this.state !== job_states.PRIMED) {
             throw new Error(
                 'Job must be in primed state, current state: ' +
-                    this.state.toString()
+                    this.state.toString(),
             );
         }
 
@@ -378,7 +378,7 @@ class Job {
                 this.timeouts.compile,
                 this.cpu_times.compile,
                 this.memory_limits.compile,
-                event_bus
+                event_bus,
             );
             emit_event_bus_result('compile', compile);
             compile_errored = compile.code !== 0;
@@ -387,7 +387,7 @@ class Job {
                 box = await this.#create_isolate_box();
                 await fs.rename(
                     path.join(old_box_dir, 'submission'),
-                    path.join(box.dir, 'submission')
+                    path.join(box.dir, 'submission'),
                 );
             }
         }
@@ -403,7 +403,7 @@ class Job {
                 this.timeouts.run,
                 this.cpu_times.run,
                 this.memory_limits.run,
-                event_bus
+                event_bus,
             );
             emit_event_bus_result('run', run);
         }
@@ -429,19 +429,19 @@ class Job {
                     (error, stdout, stderr) => {
                         if (error) {
                             this.logger.error(
-                                `Failed to run isolate --cleanup: ${error.message} on box #${box.id}\nstdout: ${stdout}\nstderr: ${stderr}`
+                                `Failed to run isolate --cleanup: ${error.message} on box #${box.id}\nstdout: ${stdout}\nstderr: ${stderr}`,
                             );
                         }
-                    }
+                    },
                 );
                 try {
                     await fs.rm(box.metadata_file_path);
                 } catch (e) {
                     this.logger.error(
-                        `Failed to remove the metadata directory of box #${box.id}. Error: ${e.message}`
+                        `Failed to remove the metadata directory of box #${box.id}. Error: ${e.message}`,
                     );
                 }
-            })
+            }),
         );
     }
 }

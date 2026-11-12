@@ -5,7 +5,11 @@ const path = require('path');
 const config = require('./config');
 const fs = require('fs/promises');
 const globals = require('./globals');
-const { acquire_job_slot, release_job_slot, get_next_box_id } = require('./job');
+const {
+    acquire_job_slot,
+    release_job_slot,
+    get_next_box_id,
+} = require('./job');
 
 const ISOLATE_PATH = '/usr/local/bin/isolate';
 
@@ -68,7 +72,7 @@ class Session {
                 (error, stdout, stderr) => {
                     if (error) {
                         rej(
-                            `Failed to run isolate --init: ${error.message}\nstdout: ${stdout}\nstderr: ${stderr}`
+                            `Failed to run isolate --init: ${error.message}\nstdout: ${stdout}\nstderr: ${stderr}`,
                         );
                         return;
                     }
@@ -81,7 +85,7 @@ class Session {
                         metadata_file_path,
                         dir: `${stdout.trim()}/box`,
                     });
-                }
+                },
             );
         });
 
@@ -94,7 +98,7 @@ class Session {
             const rel = path.relative(submission_dir, file_path);
             if (rel.startsWith('..'))
                 throw new Error(
-                    `File path "${file.name}" tries to escape parent directory: ${rel}`
+                    `File path "${file.name}" tries to escape parent directory: ${rel}`,
                 );
             await fs.mkdir(path.dirname(file_path), {
                 recursive: true,
@@ -102,7 +106,7 @@ class Session {
             });
             await fs.write_file(
                 file_path,
-                Buffer.from(file.content, file.encoding)
+                Buffer.from(file.content, file.encoding),
             );
         }
 
@@ -111,11 +115,21 @@ class Session {
 
     async wait_for_execute() {
         if (this.#current_exec_promise) {
-            try { await this.#current_exec_promise; } catch (_) {}
+            try {
+                await this.#current_exec_promise;
+            } catch (_) {}
         }
     }
 
-    async run_execute(code, args, stdin, timeout, cpu_time, memory_limit, event_bus) {
+    async run_execute(
+        code,
+        args,
+        stdin,
+        timeout,
+        cpu_time,
+        memory_limit,
+        event_bus,
+    ) {
         if (this.#is_executing) {
             throw new Error('Session is already executing');
         }
@@ -123,13 +137,15 @@ class Session {
         this.#current_event_bus = event_bus;
 
         const start_time = Date.now();
-        this.logger.info(`Execute invoked (code_length=${code.length} args=${JSON.stringify(args)})`);
+        this.logger.info(
+            `Execute invoked (code_length=${code.length} args=${JSON.stringify(args)})`,
+        );
 
         const exec = async () => {
             const exec_path = path.join(
                 this.#box.dir,
                 'submission',
-                '_exec.code'
+                '_exec.code',
             );
             await fs.write_file(exec_path, code);
 
@@ -166,7 +182,7 @@ class Session {
                     '_exec.code',
                     ...args,
                 ],
-                { stdio: 'pipe' }
+                { stdio: 'pipe' },
             );
             this.#current_proc = proc;
 
@@ -215,9 +231,13 @@ class Session {
 
             const result = {
                 code: exit_code,
-                signal: ['TO', 'OL', 'EL'].includes(status) ? 'SIGKILL' : exit_signal,
+                signal: ['TO', 'OL', 'EL'].includes(status)
+                    ? 'SIGKILL'
+                    : exit_signal,
             };
-            this.logger.info(`Execute finished (exit_code=${result.code} signal=${result.signal} duration=${Date.now() - start_time}ms)`);
+            this.logger.info(
+                `Execute finished (exit_code=${result.code} signal=${result.signal} duration=${Date.now() - start_time}ms)`,
+            );
             return result;
         };
 
@@ -250,7 +270,7 @@ class Session {
         const rel = path.relative(submission_dir, file_path);
         if (rel.startsWith('..'))
             throw new Error(
-                `File path "${filename}" tries to escape submission directory`
+                `File path "${filename}" tries to escape submission directory`,
             );
         return await fs.read_file(file_path);
     }
@@ -267,16 +287,16 @@ class Session {
                 (error, stdout, stderr) => {
                     if (error) {
                         this.logger.error(
-                            `Failed to run isolate --cleanup: ${error.message} on box #${this.#box.id}\nstdout: ${stdout}\nstderr: ${stderr}`
+                            `Failed to run isolate --cleanup: ${error.message} on box #${this.#box.id}\nstdout: ${stdout}\nstderr: ${stderr}`,
                         );
                     }
-                }
+                },
             );
             try {
                 await fs.rm(this.#box.metadata_file_path);
             } catch (e) {
                 this.logger.error(
-                    `Failed to remove metadata file for box #${this.#box.id}: ${e.message}`
+                    `Failed to remove metadata file for box #${this.#box.id}: ${e.message}`,
                 );
             }
         }

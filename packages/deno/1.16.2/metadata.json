@@ -5,16 +5,11 @@
     "provides": [
         {
             "language": "typescript",
-            "aliases": [
-                "deno",
-                "deno-ts"
-            ]
+            "aliases": ["deno", "deno-ts"]
         },
         {
             "language": "javascript",
-            "aliases": [
-                "deno-js"
-            ]
+            "aliases": ["deno-js"]
         }
     ]
 }
